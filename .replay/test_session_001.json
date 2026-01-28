@@ -1,0 +1,41 @@
+{
+  "session_id": "test_session_001",
+  "contract_id": "test_contract",
+  "memo": "Testing PROJECT MASK replay system",
+  "created_at": "2026-01-28T12:00:00Z",
+  "files": [
+    {
+      "path": "test_project/hello.py",
+      "operations": [
+        {
+          "type": "navigate",
+          "line": 6
+        },
+        {
+          "type": "insert",
+          "line": 6,
+          "content": "    name = input(\"What is your name? \")\n"
+        },
+        {
+          "type": "navigate",
+          "line": 7
+        },
+        {
+          "type": "delete",
+          "line": 7,
+          "line_end": 7
+        },
+        {
+          "type": "insert",
+          "line": 7,
+          "content": "    print(f\"Hello, {name}!\")\n"
+        }
+      ]
+    }
+  ],
+  "replay_config": {
+    "base_wpm": 60,
+    "typo_probability": 0.03,
+    "thinking_pause_probability": 0.15
+  }
+}

@@ -1,0 +1,15 @@
+# PROJECT MASK Dependencies
+# Code Replay System for Upwork Privacy
+
+# Git diff parsing
+unidiff>=0.7.5
+
+# YAML configuration
+pyyaml>=6.0
+
+# X11 bindings (optional, for advanced window detection)
+python-xlib>=0.33
+
+# Type checking (development)
+mypy>=1.0
+types-PyYAML>=6.0

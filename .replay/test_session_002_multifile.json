@@ -1,0 +1,33 @@
+{
+  "session_id": "test_session_002_multifile",
+  "contract_id": "test_contract",
+  "memo": "Multi-file test - adding calculator module",
+  "created_at": "2026-01-28T12:30:00Z",
+  "files": [
+    {
+      "path": "test_project/calculator.py",
+      "operations": [
+        {
+          "type": "insert",
+          "line": 1,
+          "content": "#!/usr/bin/env python3\n\"\"\"Simple calculator module.\"\"\"\n\n\ndef add(a: int, b: int) -> int:\n    \"\"\"Add two numbers.\"\"\"\n    return a + b\n\n\ndef subtract(a: int, b: int) -> int:\n    \"\"\"Subtract b from a.\"\"\"\n    return a - b\n\n\ndef multiply(a: int, b: int) -> int:\n    \"\"\"Multiply two numbers.\"\"\"\n    return a * b\n\n\ndef divide(a: int, b: int) -> float:\n    \"\"\"Divide a by b.\"\"\"\n    if b == 0:\n        raise ValueError(\"Cannot divide by zero\")\n    return a / b\n"
+        }
+      ]
+    },
+    {
+      "path": "test_project/test_calculator.py",
+      "operations": [
+        {
+          "type": "insert",
+          "line": 1,
+          "content": "#!/usr/bin/env python3\n\"\"\"Tests for calculator module.\"\"\"\nimport unittest\nfrom calculator import add, subtract, multiply, divide\n\n\nclass TestCalculator(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n        self.assertEqual(add(-1, 1), 0)\n\n    def test_subtract(self):\n        self.assertEqual(subtract(5, 3), 2)\n        self.assertEqual(subtract(0, 5), -5)\n\n    def test_multiply(self):\n        self.assertEqual(multiply(3, 4), 12)\n        self.assertEqual(multiply(-2, 3), -6)\n\n    def test_divide(self):\n        self.assertEqual(divide(10, 2), 5.0)\n        with self.assertRaises(ValueError):\n            divide(1, 0)\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+        }
+      ]
+    }
+  ],
+  "replay_config": {
+    "base_wpm": 75,
+    "typo_probability": 0.02,
+    "thinking_pause_probability": 0.10
+  }
+}

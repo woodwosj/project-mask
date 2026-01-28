@@ -1,0 +1,37 @@
+[Unit]
+Description=PROJECT MASK Session Orchestrator Daemon
+Documentation=https://github.com/loomworks/project-mask
+After=network.target graphical.target
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+
+# Working directory - change to your PROJECT MASK location
+WorkingDirectory=/home/%i/project-mask
+
+# Ensure X11 display is available
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/%i/.Xauthority
+
+# The daemon command
+ExecStart=/usr/bin/python3 -m orchestrator.session_orchestrator
+
+# Restart policy
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mask-daemon
+
+[Install]
+WantedBy=graphical.target
