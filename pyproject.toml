@@ -47,15 +47,15 @@ dev = [
 
 [project.scripts]
 mask-capture = "capture.cli:main"
-mask-daemon = "orchestrator.session_orchestrator:main"
+mask-replay = "replay.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/loomworks/project-mask"
-Documentation = "https://github.com/loomworks/project-mask#readme"
-Repository = "https://github.com/loomworks/project-mask"
+Homepage = "https://github.com/woodwosj/project-mask"
+Documentation = "https://github.com/woodwosj/project-mask#readme"
+Repository = "https://github.com/woodwosj/project-mask"
 
 [tool.setuptools]
-packages = ["capture", "replay", "upwork", "orchestrator", "config"]
+packages = ["capture", "replay", "config"]
 
 [tool.setuptools.package-data]
 config = ["*.yaml"]
@@ -78,7 +78,7 @@ exclude = '''
 [tool.isort]
 profile = "black"
 line_length = 100
-known_first_party = ["capture", "replay", "upwork", "orchestrator", "config"]
+known_first_party = ["capture", "replay", "config"]
 
 [tool.mypy]
 python_version = "3.9"

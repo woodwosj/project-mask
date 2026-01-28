@@ -1,8 +1,8 @@
 # PROJECT MASK Default Configuration
-# Code Replay System for Upwork Privacy
+# Code Replay System - Types code at human speeds for Upwork activity tracking
 
 # =============================================================================
-# Replay Configuration
+# Replay Configuration (Human-like Typing Simulation)
 # =============================================================================
 replay:
   # Base typing speed in words per minute (60-120 typical for developers)
@@ -32,11 +32,11 @@ replay:
   # Enable bigram acceleration for common letter pairs
   bigram_acceleration: true
 
-  # Bigram acceleration factor (0.6 = 40% faster)
+  # Bigram acceleration factor (0.6 = 40% faster for common pairs like 'th', 'he')
   bigram_factor: 0.6
 
 # =============================================================================
-# Input Backend Configuration
+# Input Backend Configuration (xdotool)
 # =============================================================================
 input:
   # Delay after each keypress in seconds
@@ -70,114 +70,12 @@ vscode:
   # Delay after opening a file to ensure it's loaded (ms)
   file_load_delay: 500
 
-  # Number of retries for file open operations
-  file_open_retries: 1
-
-# =============================================================================
-# Upwork Controller Configuration
-# =============================================================================
-upwork:
-  # Mode: 'web' for browser-based, 'desktop' for app (desktop not available on ARM64)
-  mode: web
-
-  # Browser to use in web mode
-  browser: firefox
-
-  # Upwork time tracker URL
-  url: "https://www.upwork.com/ab/account-security/login"
-
-  # Delay after clicks in milliseconds
-  click_delay: 200
-
-  # Delay between characters when typing in milliseconds
-  typing_delay: 50
-
-  # Number of retries on UI interaction failure
-  retry_count: 3
-
-  # Timeout waiting for Upwork to be ready in seconds
-  ready_timeout: 30
-
-  # Calibrated UI element coordinates (set by calibration tool)
-  # These are screen coordinates for UI automation
-  coordinates:
-    # Contract dropdown position
-    contract_dropdown:
-      x: 0
-      y: 0
-    # Memo/activity input field position
-    memo_field:
-      x: 0
-      y: 0
-    # Start/stop button position
-    start_button:
-      x: 0
-      y: 0
-    stop_button:
-      x: 0
-      y: 0
-    # Screen resolution when calibrated
-    screen_resolution:
-      width: 1920
-      height: 1080
-
-# =============================================================================
-# Session Orchestrator Configuration
-# =============================================================================
-orchestrator:
-  # Interval between git polls in seconds (300 = 5 minutes)
-  poll_interval: 300
-
-  # Directory containing replay session files (relative to repo root)
-  replay_dir: ".replay"
-
-  # File tracking processed sessions
-  processed_file: ".replay/.processed"
-
-  # Git configuration
-  git:
-    # Git remote name
-    remote: origin
-    # Git branch to sync with
-    branch: main
-
-  # Number of consecutive failures before extended pause
-  max_consecutive_failures: 3
-
-  # Extended pause duration after max failures in seconds
-  failure_pause: 600
-
 # =============================================================================
 # Logging Configuration
 # =============================================================================
 logging:
-  # Log file path
-  file: session.log
-
   # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
   level: INFO
 
-  # Maximum log file size in bytes (10MB)
-  max_bytes: 10485760
-
-  # Number of backup log files to keep
-  backup_count: 5
-
   # Log format
   format: "%(asctime)s %(levelname)s [%(name)s] %(message)s"
-
-  # Date format for log timestamps
-  date_format: "%Y-%m-%d %H:%M:%S"
-
-# =============================================================================
-# Watchdog Configuration (Optional)
-# =============================================================================
-watchdog:
-  # Enable watchdog process for emergency clock-out
-  enabled: false
-
-  # Watchdog check interval in seconds
-  check_interval: 30
-
-  # File used to signal watchdog of clock-in state
-  state_file: ".watchdog_state"

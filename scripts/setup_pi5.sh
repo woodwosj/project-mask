@@ -1,6 +1,6 @@
 #!/bin/bash
 # PROJECT MASK - Raspberry Pi 5 Setup Script
-# This script sets up Ubuntu on Raspberry Pi 5 for the code replay system.
+# Sets up Ubuntu on Raspberry Pi 5 for code replay with Upwork time tracking.
 
 set -e
 
@@ -114,51 +114,29 @@ echo "=== Display Server ==="
 if [ -n "$DISPLAY" ]; then
     echo "DISPLAY=$DISPLAY"
     echo "Session type: ${XDG_SESSION_TYPE:-unknown}"
+    if [ "${XDG_SESSION_TYPE}" = "wayland" ]; then
+        echo ""
+        echo "WARNING: Wayland detected. xdotool requires X11."
+        echo "Consider switching to an X11 session for best results."
+    fi
 else
     echo "Warning: No DISPLAY set. Run this script from a desktop session."
 fi
-
-# Create systemd service
-echo ""
-echo "=== Creating systemd service ==="
-SERVICE_FILE="/etc/systemd/system/mask-daemon.service"
-sudo tee "$SERVICE_FILE" > /dev/null << EOF
-[Unit]
-Description=PROJECT MASK Code Replay Daemon
-After=graphical-session.target
-Wants=graphical-session.target
-
-[Service]
-Type=simple
-User=$USER
-Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/$USER/.Xauthority
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$VENV_DIR/bin/python -m orchestrator.session_orchestrator
-Restart=on-failure
-RestartSec=30
-
-[Install]
-WantedBy=graphical-session.target
-EOF
-
-sudo systemctl daemon-reload
-echo "Service installed at $SERVICE_FILE"
-echo "To enable: sudo systemctl enable mask-daemon"
-echo "To start:  sudo systemctl start mask-daemon"
 
 # Final instructions
 echo ""
 echo "=== Setup Complete ==="
 echo ""
-echo "Next steps:"
-echo "1. Activate venv: source $VENV_DIR/bin/activate"
-echo "2. Test input:    python scripts/test_input.py"
-echo "3. Calibrate:     python scripts/calibrate_upwork.py"
-echo "4. Run daemon:    mask-daemon"
+echo "Usage:"
+echo "  1. Activate venv:    source $VENV_DIR/bin/activate"
+echo "  2. Test input:       python scripts/test_input.py"
+echo "  3. List sessions:    mask-replay --list"
+echo "  4. Preview session:  mask-replay test_session_001 --dry-run"
+echo "  5. Run replay:       mask-replay test_session_001"
 echo ""
-echo "For systemd service:"
-echo "  sudo systemctl enable mask-daemon"
-echo "  sudo systemctl start mask-daemon"
-echo "  journalctl -u mask-daemon -f"
+echo "Workflow:"
+echo "  1. Start Upwork time tracker and clock in"
+echo "  2. Run: mask-replay <session.json>"
+echo "  3. Watch code being typed in VS Code"
+echo "  4. Clock out when replay completes"
 echo ""
