@@ -1,7 +1,8 @@
 """Replay engine for executing code replay sessions.
 
 This module handles loading session files and executing file operations
-through the VS Code controller.
+through the VS Code controller. Supports optional AI intervention for
+automatic issue detection and recovery.
 """
 
 from dataclasses import dataclass, field
@@ -11,8 +12,10 @@ import logging
 import random
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from intervention.orchestrator import InterventionOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +292,7 @@ class ReplayEngine:
     - Loading and validating session files
     - Executing file operations through VS Code controller
     - Handling progress reporting and abort requests
+    - Optionally integrating AI intervention for monitoring and recovery
     """
 
     def __init__(
@@ -296,6 +300,7 @@ class ReplayEngine:
         vscode_controller: Any,
         config: Optional[Dict] = None,
         project_root: Optional[Path] = None,
+        intervention_orchestrator: Optional['InterventionOrchestrator'] = None,
     ):
         """Initialize the replay engine.
 
@@ -303,10 +308,18 @@ class ReplayEngine:
             vscode_controller: VSCodeController instance for executing operations.
             config: Optional configuration dictionary.
             project_root: Root directory of the project (for creating files).
+            intervention_orchestrator: Optional AI intervention orchestrator.
+                If provided, enables automatic issue detection and recovery.
         """
         self.vscode = vscode_controller
         self.config = config or {}
         self.project_root = project_root or Path('.')
+
+        # AI Intervention (optional)
+        self.intervention = intervention_orchestrator
+        self._intervention_check_on_file_change = self.config.get(
+            'intervention', {}
+        ).get('check_on_file_change', True)
 
         # Abort handling
         self._abort_requested = False
@@ -406,6 +419,12 @@ class ReplayEngine:
         # Apply session-specific config overrides
         original_config = self._apply_session_config(session.replay_config)
 
+        # Start AI intervention monitoring if enabled
+        if self.intervention:
+            self.intervention.set_critical_failure_callback(self.request_abort)
+            self.intervention.start()
+            logger.info("AI intervention monitoring started")
+
         try:
             for file_op in session.files:
                 self._check_abort()
@@ -423,10 +442,20 @@ class ReplayEngine:
                     if self._current_file is not None:
                         self._maybe_pause_between_files(session.replay_config)
 
+                        # Perform intervention check between files if enabled
+                        if self.intervention and self._intervention_check_on_file_change:
+                            self._perform_intervention_check(
+                                f"Completed file: {self._current_file}"
+                            )
+
                     if not self._open_file_with_retry(file_op.path):
                         raise FileOpenError(f"Failed to open file: {file_op.path}")
 
                     self._current_file = file_op.path
+
+                    # Update intervention context
+                    if self.intervention:
+                        self.intervention.set_context(f"Working on: {file_op.path}")
 
                 # Execute operations for this file
                 for op in file_op.operations:
@@ -445,6 +474,14 @@ class ReplayEngine:
                 # Save the file after operations
                 self.vscode.save_file()
 
+                # Reset intervention retry count after successful file completion
+                if self.intervention:
+                    self.intervention.reset_retry_count()
+
+            # Final intervention check on completion
+            if self.intervention and self._intervention_check_on_file_change:
+                self._perform_intervention_check("Session completed")
+
             logger.info(f"Replay session '{session.session_id}' completed successfully")
             return True
 
@@ -453,8 +490,38 @@ class ReplayEngine:
             raise
 
         finally:
+            # Stop AI intervention monitoring
+            if self.intervention:
+                self.intervention.stop()
+                stats = self.intervention.get_statistics()
+                logger.info(
+                    f"AI intervention summary: {stats['total_checks']} checks, "
+                    f"{stats['intervention_count']} interventions, "
+                    f"{stats['recovery_success_rate']:.0%} success rate"
+                )
+
             # Restore original config
             self._restore_config(original_config)
+
+    def _perform_intervention_check(self, context: str) -> None:
+        """Perform an immediate intervention check.
+
+        Args:
+            context: Context string describing current state.
+        """
+        if not self.intervention:
+            return
+
+        try:
+            event = self.intervention.check_now(context=context)
+            if event.status != "normal" and event.actions_taken:
+                logger.info(
+                    f"Intervention performed: {event.status} -> "
+                    f"{len(event.actions_taken)} actions "
+                    f"({'success' if event.recovery_success else 'failed'})"
+                )
+        except Exception as e:
+            logger.warning(f"Intervention check failed: {e}")
 
     def _apply_session_config(
         self,

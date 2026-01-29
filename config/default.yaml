@@ -71,6 +71,76 @@ vscode:
   file_load_delay: 500
 
 # =============================================================================
+# AI Intervention Configuration
+# =============================================================================
+intervention:
+  # Enable/disable AI intervention system
+  # Set to false for backward compatibility or when API key is unavailable
+  enabled: false
+
+  # Interval between automatic checks in seconds
+  # Default: 600 (10 minutes). Shorter intervals increase API costs.
+  # Recommended range: 300-900 seconds
+  interval_seconds: 600
+
+  # Minimum time between recovery attempts in seconds
+  # Prevents rapid-fire interventions that could make things worse
+  min_cooldown_seconds: 60
+
+  # Maximum recovery attempts before failing the session
+  # After this many failed recoveries, the session will abort
+  max_retries: 3
+
+  # Minimum confidence to trigger recovery action (0.0 to 1.0)
+  # Higher values = fewer false positives but may miss real issues
+  # Recommended: 0.80-0.90
+  confidence_threshold: 0.85
+
+  # Screenshot backend: 'auto', 'mss', or 'scrot'
+  # - auto: Use mss if available, fall back to scrot
+  # - mss: Pure Python, fast, recommended
+  # - scrot: X11 command-line tool, fallback for compatibility
+  screenshot_backend: auto
+
+  # Save screenshots for debugging
+  # Screenshots are saved with timestamps for post-session review
+  save_screenshots: true
+
+  # Directory for saved screenshots (supports ~ expansion)
+  screenshot_dir: "~/.mask/screenshots"
+
+  # JPEG quality for screenshot compression (1-100)
+  # Lower values = smaller files, faster uploads
+  jpeg_quality: 85
+
+  # Maximum screenshot dimension (larger images are scaled down)
+  # Reduces API latency and costs
+  max_screenshot_dimension: 1920
+
+  # Claude model for analysis
+  # Default: claude-opus-4-5-20251101 (Claude Opus 4.5)
+  model: "claude-opus-4-5-20251101"
+
+  # Perform intervention check after each file completes
+  # Provides checkpoints between files for better coverage
+  check_on_file_change: true
+
+  # File verification settings
+  verification:
+    # Enable file content verification after replay
+    enabled: true
+
+    # Minimum similarity ratio to consider a match (0.0 to 1.0)
+    # 0.98 = 98% similar content is acceptable
+    match_threshold: 0.98
+
+    # Minimum similarity for partial match (review recommended)
+    partial_threshold: 0.90
+
+    # Verify files when session completes
+    verify_on_completion: true
+
+# =============================================================================
 # Logging Configuration
 # =============================================================================
 logging:

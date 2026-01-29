@@ -88,3 +88,13 @@ config/*.local.yaml
 
 # Calibration backups
 config/*.backup
+
+# AI Intervention screenshots (may contain sensitive code)
+.mask/
+~/.mask/
+screenshots/
+*.jpg
+*.jpeg
+*.png
+!docs/*.png
+!docs/*.jpg

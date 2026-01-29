@@ -10,6 +10,23 @@ pyyaml>=6.0
 # X11 bindings (optional, for advanced window detection)
 python-xlib>=0.33
 
-# Type checking (development)
+# =============================================================================
+# AI Intervention System Dependencies
+# =============================================================================
+
+# Anthropic SDK for Claude Opus 4.5 vision analysis
+anthropic>=0.40.0
+
+# Screenshot capture (pure Python, cross-platform)
+mss>=9.0.0
+
+# Image processing for screenshot optimization
+Pillow>=10.0.0
+
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+
+# Type checking
 mypy>=1.0
 types-PyYAML>=6.0
