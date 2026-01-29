@@ -139,7 +139,7 @@ def preview_session(session_path: Path):
     print("=" * 60)
 
 
-def run_replay(session_path: Path, project_dir: Path):
+def run_replay(session_path: Path, project_dir: Path, skip_confirm: bool = False):
     """Execute the replay session."""
     print("=" * 60)
     print("PROJECT MASK - Code Replay")
@@ -176,10 +176,13 @@ def run_replay(session_path: Path, project_dir: Path):
     print("  2. VS Code is visible on screen")
     print("-" * 40)
 
-    response = input("\nPress Enter to start (or 'q' to quit): ")
-    if response.lower() == 'q':
-        print("Aborted.")
-        return False
+    if not skip_confirm:
+        response = input("\nPress Enter to start (or 'q' to quit): ")
+        if response.lower() == 'q':
+            print("Aborted.")
+            return False
+    else:
+        print("\nStarting automatically (--yes flag)...")
 
     # Focus VS Code
     print("\nFocusing VS Code...")
@@ -239,6 +242,8 @@ Examples:
                         help='Project directory (default: current)')
     parser.add_argument('--replay-dir', type=Path,
                         help='Directory containing session files (default: .replay/)')
+    parser.add_argument('--yes', '-y', action='store_true',
+                        help='Skip confirmation prompt')
 
     args = parser.parse_args()
 
@@ -285,7 +290,7 @@ Examples:
         return 1
 
     # Run replay
-    success = run_replay(session_path, project_dir)
+    success = run_replay(session_path, project_dir, skip_confirm=args.yes)
     return 0 if success else 1
 
 
