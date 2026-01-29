@@ -182,7 +182,12 @@ class Remediator:
         expected_content: str,
         original_similarity: float,
     ) -> RemediationResult:
-        """Remediate a single file by re-typing its content.
+        """Remediate a single file by directly writing the correct content.
+
+        Since the purpose of replay is to generate authentic typing activity
+        during the replay phase (when Upwork is capturing), post-replay
+        remediation can write files directly - no need to re-type through
+        VS Code which has IntelliSense interference issues.
 
         Args:
             path: File path relative to workspace.
@@ -196,41 +201,29 @@ class Remediator:
         final_similarity = original_similarity
         error = None
 
+        file_path = self.workspace_root / path
+
         for attempt in range(1, self.max_attempts + 1):
             attempts = attempt
             logger.info(f"Remediation attempt {attempt}/{self.max_attempts} for {path}")
 
             try:
-                # Open the file
-                if not self.vscode.open_file(path):
-                    error = "Failed to open file"
-                    continue
-
-                time.sleep(0.5)
-
-                # Clear file content (Ctrl+A, Delete)
-                self.vscode.input.key_combo('ctrl', 'a')
-                time.sleep(0.1)
-                self.vscode.input.key_press('Delete')
-                time.sleep(0.2)
-
-                # Type the correct content (fast, no typos)
-                logger.info(f"Re-typing {len(expected_content)} characters...")
-                self.vscode.type_code(
-                    expected_content,
-                    wpm=200,  # Fast typing for remediation
-                    typo_probability=0.0,  # No typos
-                )
-
-                # Save the file
-                self.vscode.save_file()
-                time.sleep(0.5)
+                # Write file content directly (fast and reliable)
+                logger.info(f"Writing {len(expected_content)} characters directly to file...")
+                file_path.write_text(expected_content)
 
                 # Verify the fix
                 comparison = self.verifier.verify_file(path, expected_content)
                 final_similarity = comparison.similarity
 
                 if comparison.match_status == "match":
+                    # Reload the file in VS Code to show the fix
+                    try:
+                        if self.vscode.open_file(path):
+                            time.sleep(0.3)
+                    except Exception:
+                        pass  # Not critical if reload fails
+
                     return RemediationResult(
                         file_path=path,
                         original_similarity=original_similarity,
@@ -243,7 +236,7 @@ class Remediator:
                         f"Attempt {attempt} result: {comparison.match_status} "
                         f"({final_similarity:.1%})"
                     )
-                    error = f"Still {comparison.match_status} after re-typing"
+                    error = f"Still {comparison.match_status} after writing"
 
             except Exception as e:
                 logger.error(f"Remediation attempt {attempt} failed: {e}")
