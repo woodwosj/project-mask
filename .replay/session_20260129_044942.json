@@ -1,0 +1,22 @@
+{
+  "session_id": "session_20260129_044942",
+  "contract_id": "TestClient",
+  "memo": "Calculator app implementation",
+  "files": [
+    {
+      "path": "calculator_test/calculator.py",
+      "operations": [
+        {
+          "type": "insert",
+          "line": 1,
+          "content": "\"\"\"Simple Calculator App\"\"\"\n\n\ndef add(a, b):\n    return a + b\n\n\ndef subtract(a, b):\n    return a - b\n\n\ndef multiply(a, b):\n    return a * b\n\n\ndef divide(a, b):\n    if b == 0:\n        raise ValueError(\"Cannot divide by zero\")\n    return a / b\n\n\ndef main():\n    print(\"Simple Calculator\")\n    print(\"1. Add\")\n    print(\"2. Subtract\")\n    print(\"3. Multiply\")\n    print(\"4. Divide\")\n\n    choice = input(\"Enter choice (1-4): \")\n    num1 = float(input(\"Enter first number: \"))\n    num2 = float(input(\"Enter second number: \"))\n\n    if choice == '1':\n        print(f\"Result: {add(num1, num2)}\")\n    elif choice == '2':\n        print(f\"Result: {subtract(num1, num2)}\")\n    elif choice == '3':\n        print(f\"Result: {multiply(num1, num2)}\")\n    elif choice == '4':\n        print(f\"Result: {divide(num1, num2)}\")\n    else:\n        print(\"Invalid choice\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+        }
+      ]
+    }
+  ],
+  "replay_config": {
+    "base_wpm": 85,
+    "typo_probability": 0.02,
+    "thinking_pause_probability": 0.1
+  }
+}
