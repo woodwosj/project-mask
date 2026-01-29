@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Run replay with AI intervention enabled."""
+
+import sys
+import os
+import time
+import subprocess
+from pathlib import Path
+
+# Add project root to path
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from replay.input_backend import create_backend
+from replay.vscode_controller import VSCodeController
+from replay.replay_engine import ReplayEngine
+
+from intervention import (
+    InterventionOrchestrator, InterventionConfig,
+    ClaudeAnalyzer, create_screenshot_backend, RecoveryExecutor
+)
+
+
+def main():
+    print("=" * 60)
+    print("PROJECT MASK - Replay with AI Intervention")
+    print("=" * 60)
+    print()
+
+    # Get project dir from args or use default
+    if len(sys.argv) > 1:
+        project_dir = Path(sys.argv[1]).resolve()
+    else:
+        project_dir = PROJECT_ROOT
+
+    # Get session path
+    if len(sys.argv) > 2:
+        session_path = Path(sys.argv[2])
+    else:
+        session_path = project_dir / '.replay' / 'fast_calc.json'
+
+    print(f"Project: {project_dir}")
+    print(f"Session: {session_path}")
+    print()
+
+    # Create replay components
+    backend = create_backend()
+    print(f"Input backend: {backend.__class__.__name__}")
+
+    controller = VSCodeController(backend, project_root=project_dir)
+
+    # Create intervention components
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not api_key:
+        print("ERROR: ANTHROPIC_API_KEY not set")
+        sys.exit(1)
+    print(f"API key present: Yes")
+
+    screenshot_backend = create_screenshot_backend({
+        'intervention': {'screenshot_backend': 'scrot'}
+    })
+    print(f"Screenshot backend: {screenshot_backend.__class__.__name__}")
+
+    analyzer = ClaudeAnalyzer(api_key=api_key)
+    print(f"Analyzer model: {analyzer.model}")
+
+    recovery = RecoveryExecutor(backend, controller)
+    print("Recovery executor ready")
+
+    # Configure intervention - check every 30 seconds for this test
+    config = InterventionConfig(
+        enabled=True,
+        interval_seconds=30,
+        confidence_threshold=0.8,
+        max_retries=3,
+        cooldown_seconds=10,
+    )
+
+    orchestrator = InterventionOrchestrator(
+        config=config,
+        screenshot_backend=screenshot_backend,
+        analyzer=analyzer,
+        recovery_executor=recovery,
+    )
+    print("Intervention orchestrator ready")
+    print()
+
+    # Create engine with intervention
+    engine = ReplayEngine(
+        vscode_controller=controller,
+        project_root=project_dir,
+        intervention_orchestrator=orchestrator,
+    )
+
+    # Load session
+    session = engine.load_session(str(session_path))
+    print(f"Loaded session: {session.session_id}")
+    print(f"Files: {len(session.files)}")
+    print()
+
+    # Open VS Code
+    print("Opening VS Code...")
+    subprocess.Popen(
+        ['code', str(project_dir)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    time.sleep(3)
+
+    # Focus VS Code
+    print("Focusing VS Code...")
+    controller.focus_window()
+    time.sleep(1)
+
+    def on_progress(msg, current, total):
+        pct = (current / total * 100) if total > 0 else 0
+        print(f"  [{current}/{total}] ({pct:.0f}%) {msg}")
+
+    print()
+    print("Starting replay with AI intervention...")
+    print("(Intervention will check every 30 seconds)")
+    print()
+
+    try:
+        engine.execute(session, progress_callback=on_progress)
+        print()
+        print("=" * 60)
+        print("REPLAY COMPLETE!")
+        print("=" * 60)
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # Show intervention stats
+    stats = orchestrator.get_statistics()
+    print()
+    print("Intervention Statistics:")
+    print(f"  Total checks: {stats['total_checks']}")
+    print(f"  Interventions: {stats['intervention_count']}")
+    print(f"  Success rate: {stats['recovery_success_rate']:.0%}")
+
+
+if __name__ == '__main__':
+    main()
