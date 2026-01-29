@@ -99,14 +99,19 @@ def main():
     print(f"Files: {len(session.files)}")
     print()
 
-    # Open VS Code
+    # Kill any existing VS Code instances to ensure clean state
+    print("Closing any existing VS Code instances...")
+    subprocess.run(['pkill', '-f', 'code'], capture_output=True)
+    time.sleep(2)
+
+    # Open VS Code with the project folder in a new window
     print("Opening VS Code...")
     subprocess.Popen(
-        ['code', str(project_dir)],
+        ['code', '--new-window', str(project_dir)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    time.sleep(3)
+    time.sleep(5)  # More time for VS Code to fully start
 
     # Focus VS Code
     print("Focusing VS Code...")
