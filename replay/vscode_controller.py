@@ -627,6 +627,9 @@ class VSCodeController:
             char: Character to type.
         """
         if char == '\n':
+            # Dismiss any IntelliSense popup before pressing Return
+            self.input.key_press('Escape')
+            time.sleep(0.02)
             self.input.key_press('Return')
             # Cancel VS Code's auto-indent by going to column 0 and clearing
             time.sleep(0.05)
@@ -641,6 +644,12 @@ class VSCodeController:
             self.input.key_press('Tab')
         else:
             self.input.type_text(char, delay=0)
+            # Dismiss IntelliSense after characters that commonly trigger it
+            # This prevents autocomplete from interfering with typing
+            if char in '.(':
+                time.sleep(0.02)
+                self.input.key_press('Escape')
+                time.sleep(0.02)
 
     def delete_lines(self, start_line: int, end_line: int) -> bool:
         """Delete a range of lines.
