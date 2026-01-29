@@ -98,3 +98,4 @@ screenshots/
 *.png
 !docs/*.png
 !docs/*.jpg
+PASSDOWN.md
