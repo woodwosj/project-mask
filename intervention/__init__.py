@@ -77,6 +77,12 @@ from intervention.orchestrator import (
     InterventionOrchestrator,
 )
 
+from intervention.stuck_detector import (
+    StuckStatus,
+    StuckCheckResult,
+    StuckDetector,
+)
+
 from intervention.remediation import (
     RemediationResult,
     RemediationSummary,
@@ -110,6 +116,10 @@ __all__ = [
     'InterventionEvent',
     'InterventionConfig',
     'InterventionOrchestrator',
+    # Stuck Detector
+    'StuckStatus',
+    'StuckCheckResult',
+    'StuckDetector',
     # Remediation
     'RemediationResult',
     'RemediationSummary',

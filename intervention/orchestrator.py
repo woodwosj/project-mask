@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from intervention.screenshot import ScreenshotBackend, Screenshot
     from intervention.analyzer import ClaudeAnalyzer, AnalysisResult, ReplayStatus
     from intervention.recovery import RecoveryExecutor, RecoveryResult
+    from intervention.stuck_detector import StuckDetector, StuckCheckResult
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,9 @@ class InterventionConfig:
         screenshot_dir: Directory for saved screenshots.
         save_screenshots: Whether to save screenshots for debugging.
         check_on_file_change: Perform check after each file completes.
+        stuck_detection_enabled: Enable stuck detection via screenshot comparison.
+        stuck_threshold_seconds: Seconds of no change before flagging stuck.
+        stuck_similarity_threshold: Similarity ratio (0-1) to consider unchanged.
     """
     enabled: bool = True
     interval_seconds: int = 600
@@ -70,6 +74,9 @@ class InterventionConfig:
     screenshot_dir: Path = field(default_factory=lambda: Path.home() / ".mask" / "screenshots")
     save_screenshots: bool = True
     check_on_file_change: bool = True
+    stuck_detection_enabled: bool = True
+    stuck_threshold_seconds: float = 60.0
+    stuck_similarity_threshold: float = 0.98
 
     @classmethod
     def from_dict(cls, data: Optional[dict]) -> 'InterventionConfig':
@@ -100,6 +107,9 @@ class InterventionConfig:
             screenshot_dir=screenshot_dir,
             save_screenshots=data.get('save_screenshots', True),
             check_on_file_change=data.get('check_on_file_change', True),
+            stuck_detection_enabled=data.get('stuck_detection_enabled', True),
+            stuck_threshold_seconds=data.get('stuck_threshold_seconds', 60.0),
+            stuck_similarity_threshold=data.get('stuck_similarity_threshold', 0.98),
         )
 
 
@@ -159,6 +169,16 @@ class InterventionOrchestrator:
 
         # Current context for analysis
         self._current_context: Optional[str] = None
+
+        # Stuck detector
+        self._stuck_detector: Optional['StuckDetector'] = None
+        if config.stuck_detection_enabled:
+            from intervention.stuck_detector import StuckDetector
+            self._stuck_detector = StuckDetector(
+                stuck_threshold_seconds=config.stuck_threshold_seconds,
+                similarity_threshold=config.stuck_similarity_threshold,
+            )
+            logger.info(f"Stuck detection enabled (threshold={config.stuck_threshold_seconds}s)")
 
         # Callbacks
         self._on_critical_failure: Optional[Callable[[], None]] = None
@@ -240,6 +260,8 @@ class InterventionOrchestrator:
         Can be called from the main thread (e.g., between file operations)
         in addition to the background periodic checks.
 
+        Performs both stuck detection (fast, local) and AI analysis.
+
         Args:
             context: Optional context about current replay state.
                     Overrides any context set via set_context().
@@ -272,7 +294,56 @@ class InterventionOrchestrator:
         if self.config.save_screenshots:
             screenshot_path = self._save_screenshot(screenshot)
 
-        # Analyze screenshot
+        # Check for stuck state first (fast, no API call)
+        stuck_result = None
+        if self._stuck_detector:
+            stuck_result = self._stuck_detector.check(screenshot)
+            logger.debug(f"Stuck check: {stuck_result.status.value} "
+                        f"(unchanged {stuck_result.seconds_unchanged:.0f}s, "
+                        f"similarity {stuck_result.similarity:.2%})")
+
+            if stuck_result.status.value == "stuck":
+                logger.warning(f"STUCK DETECTED: {stuck_result.description}")
+
+                # Execute stuck recovery actions
+                if self._can_intervene():
+                    logger.info(f"Executing stuck recovery: {stuck_result.recovery_actions}")
+                    try:
+                        recovery_results = self.recovery.execute(stuck_result.recovery_actions)
+                        actions_taken = [r.action_taken for r in recovery_results]
+                        recovery_success = all(r.success for r in recovery_results)
+                    except Exception as e:
+                        logger.error(f"Stuck recovery failed: {e}")
+                        actions_taken = [f"ERROR: {e}"]
+                        recovery_success = False
+
+                    self._last_intervention = time.time()
+
+                    # Reset stuck detector after recovery attempt
+                    self._stuck_detector.reset()
+
+                    if not recovery_success:
+                        self._retry_count += 1
+                        if self._retry_count >= self.config.max_retries:
+                            logger.error(f"Max recovery retries ({self.config.max_retries}) reached")
+                            self._trigger_critical_failure()
+                    else:
+                        self._retry_count = 0
+
+                    duration_ms = (time.time() - start_time) * 1000
+                    return self._record_event(
+                        status="stuck",
+                        confidence=1.0,
+                        description=stuck_result.description,
+                        actions_taken=actions_taken,
+                        recovery_success=recovery_success,
+                        screenshot_path=screenshot_path,
+                        duration_ms=duration_ms,
+                    )
+                else:
+                    logger.debug("Stuck intervention skipped (cooldown active)")
+
+        # Analyze screenshot with AI
         try:
             result = self.analyzer.analyze(screenshot, context=check_context)
         except Exception as e:
@@ -409,6 +480,25 @@ class InterventionOrchestrator:
         successful file operation).
         """
         self._retry_count = 0
+
+    def reset_stuck_detector(self) -> None:
+        """Reset the stuck detector baseline.
+
+        Call this when the screen is expected to change significantly
+        (e.g., after opening a new file, after recovery).
+        """
+        if self._stuck_detector:
+            self._stuck_detector.reset()
+            logger.debug("Stuck detector reset")
+
+    def on_file_change(self) -> None:
+        """Notify orchestrator that a file change occurred.
+
+        Call this when switching to a new file during replay.
+        Resets stuck detector since file changes cause visual changes.
+        """
+        self.reset_stuck_detector()
+        self.reset_retry_count()
 
     def _monitor_loop(self) -> None:
         """Background monitoring loop.

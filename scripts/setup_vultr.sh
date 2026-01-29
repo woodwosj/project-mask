@@ -20,7 +20,7 @@ USERNAME="mask"
 if ! id "$USERNAME" &>/dev/null; then
     echo "Creating user '$USERNAME'..."
     useradd -m -s /bin/bash "$USERNAME"
-    echo "$USERNAME:maskpass123" | chpasswd
+    echo "$USERNAME:Pr0jectM4sk!" | chpasswd
     usermod -aG sudo "$USERNAME"
 fi
 

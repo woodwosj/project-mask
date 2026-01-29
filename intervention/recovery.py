@@ -79,9 +79,11 @@ class RecoveryExecutor:
         'type ': '_handle_type',
         'focus_vscode': '_handle_focus_vscode',
         'click ': '_handle_click',
+        'click_editor': '_handle_click_editor',
         'wait ': '_handle_wait',
         'close_dialog': '_handle_close_dialog',
         'open_file ': '_handle_open_file',
+        'nudge_typing': '_handle_nudge_typing',
     }
 
     def __init__(
@@ -350,6 +352,57 @@ class RecoveryExecutor:
         self.input.key_press('Return')
         time.sleep(0.5)
 
+    def _handle_click_editor(self, _: str) -> None:
+        """Handle 'click_editor' action.
+
+        Clicks in the center-ish area of the screen where the editor typically is.
+        This helps regain focus when typing has stopped responding.
+        """
+        logger.debug("Clicking in editor area")
+
+        # Get screen dimensions if possible, otherwise use reasonable defaults
+        # Assuming 1920x1080, editor area is roughly center-right
+        # For smaller screens, these coordinates still work as they're conservative
+        editor_x = 960  # Center horizontally
+        editor_y = 400  # Upper-middle of editor area (below toolbar)
+
+        if hasattr(self.input, 'mouse_move_click'):
+            self.input.mouse_move_click(editor_x, editor_y)
+        else:
+            self.input.mouse_move(editor_x, editor_y)
+            time.sleep(0.05)
+            self.input.mouse_click('left')
+
+        time.sleep(0.1)
+
+    def _handle_nudge_typing(self, _: str) -> None:
+        """Handle 'nudge_typing' action.
+
+        Performs a sequence to try to unstick typing:
+        1. Click in editor area
+        2. Press End key (safe, moves to end of line)
+        3. Small delay
+
+        This is useful when the replay appears stuck but VS Code is responsive.
+        """
+        logger.debug("Nudging typing to resume")
+
+        # Click editor to ensure focus
+        self._handle_click_editor('')
+
+        time.sleep(0.2)
+
+        # Press End key - safe key that doesn't insert text
+        # This can "wake up" xdotool or the input pipeline
+        self.input.key_press('End')
+
+        time.sleep(0.1)
+
+        # Press Home to go back to start of line
+        self.input.key_press('Home')
+
+        time.sleep(0.1)
+
     def execute_preset(self, preset_name: str) -> List[RecoveryResult]:
         """Execute a predefined recovery sequence.
 
@@ -384,6 +437,15 @@ class RecoveryExecutor:
                 'press Escape',
                 'key ctrl+1',
                 'key ctrl+Home',
+            ],
+            'unstick_typing': [
+                'click_editor',
+                'wait 0.3',
+                'press Escape',
+                'wait 0.2',
+                'key ctrl+1',
+                'wait 0.2',
+                'nudge_typing',
             ],
         }
 

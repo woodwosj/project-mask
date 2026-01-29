@@ -453,8 +453,9 @@ class ReplayEngine:
 
                     self._current_file = file_op.path
 
-                    # Update intervention context
+                    # Update intervention context and reset stuck detector
                     if self.intervention:
+                        self.intervention.on_file_change()
                         self.intervention.set_context(f"Working on: {file_op.path}")
 
                 # Execute operations for this file
