@@ -74,9 +74,9 @@ class InterventionConfig:
     screenshot_dir: Path = field(default_factory=lambda: Path.home() / ".mask" / "screenshots")
     save_screenshots: bool = True
     check_on_file_change: bool = True
-    stuck_detection_enabled: bool = True
-    stuck_threshold_seconds: float = 60.0
-    stuck_similarity_threshold: float = 0.98
+    stuck_detection_enabled: bool = False  # Disabled - causes interference during long typing
+    stuck_threshold_seconds: float = 300.0  # 5 minutes - typing large files takes time
+    stuck_similarity_threshold: float = 0.995  # Higher threshold - small changes count
 
     @classmethod
     def from_dict(cls, data: Optional[dict]) -> 'InterventionConfig':
