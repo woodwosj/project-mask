@@ -595,9 +595,14 @@ class ReplayEngine:
 
         logger.debug(f"Inserting {len(op.content)} chars at line {op.line}")
 
-        # Navigate to the line
-        self.vscode.goto_line(op.line)
-        time.sleep(0.1)
+        # Navigate to the line (skip if line 1 since open_file already positions there)
+        if op.line > 1:
+            self.vscode.goto_line(op.line)
+            time.sleep(0.1)
+        else:
+            # For line 1, just ensure cursor is at start of file
+            # open_file() already does Ctrl+A, Delete which puts us at line 1
+            time.sleep(0.1)
 
         # Type the content with human-like patterns
         wpm = None
