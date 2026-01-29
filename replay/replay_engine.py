@@ -291,15 +291,22 @@ class ReplayEngine:
     - Handling progress reporting and abort requests
     """
 
-    def __init__(self, vscode_controller: Any, config: Optional[Dict] = None):
+    def __init__(
+        self,
+        vscode_controller: Any,
+        config: Optional[Dict] = None,
+        project_root: Optional[Path] = None,
+    ):
         """Initialize the replay engine.
 
         Args:
             vscode_controller: VSCodeController instance for executing operations.
             config: Optional configuration dictionary.
+            project_root: Root directory of the project (for creating files).
         """
         self.vscode = vscode_controller
         self.config = config or {}
+        self.project_root = project_root or Path('.')
 
         # Abort handling
         self._abort_requested = False
@@ -493,12 +500,21 @@ class ReplayEngine:
     def _open_file_with_retry(self, path: str) -> bool:
         """Open a file with retry on failure.
 
+        Creates the file and parent directories if they don't exist.
+
         Args:
-            path: File path to open.
+            path: File path to open (relative to project_root).
 
         Returns:
             True if successful, False otherwise.
         """
+        # Ensure file exists on disk (create if needed)
+        full_path = self.project_root / path
+        if not full_path.exists():
+            logger.info(f"Creating file: {full_path}")
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.touch()
+
         retries = getattr(self.vscode, 'file_open_retries', 1)
 
         for attempt in range(retries + 1):

@@ -271,17 +271,25 @@ class VSCodeController:
 
         logger.info(f"Opening file: {path}")
 
+        # First press Escape to close any open dialogs
+        self.input.key_press('Escape')
+        time.sleep(0.2)
+
         # Press Ctrl+P to open Quick Open
         self.input.key_combo('ctrl', 'p')
-        time.sleep(self.quick_open_delay)
+        time.sleep(self.quick_open_delay + 0.3)  # Extra delay for Quick Open
+
+        # Clear any existing text in Quick Open
+        self.input.key_combo('ctrl', 'a')
+        time.sleep(0.05)
 
         # Type the file path
-        self.input.type_text(path, delay=0.02)
-        time.sleep(0.1)
+        self.input.type_text(path, delay=0.03)
+        time.sleep(0.3)
 
         # Press Enter to open
         self.input.key_press('Return')
-        time.sleep(self.file_load_delay)
+        time.sleep(self.file_load_delay + 0.5)  # Extra delay for file load
 
         return True
 
@@ -537,6 +545,15 @@ class VSCodeController:
         """
         if char == '\n':
             self.input.key_press('Return')
+            # Cancel VS Code's auto-indent by going to column 0 and clearing
+            time.sleep(0.05)
+            self.input.key_press('Home')
+            time.sleep(0.02)
+            # Select any auto-inserted indentation and delete it
+            self.input.key_combo('shift', 'End')
+            time.sleep(0.02)
+            self.input.key_press('Delete')
+            time.sleep(0.02)
         elif char == '\t':
             self.input.key_press('Tab')
         else:
