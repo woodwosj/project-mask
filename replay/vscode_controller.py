@@ -5,10 +5,12 @@ and simulate human-like typing behavior.
 """
 
 import logging
+import os
 import random
 import subprocess
 import time
-from typing import Dict, Optional, Set
+from pathlib import Path
+from typing import Dict, Optional, Set, Union
 
 from replay.input_backend import InputBackend, InputBackendError
 
@@ -64,18 +66,21 @@ class VSCodeController:
         self,
         input_backend: InputBackend,
         config: Optional[Dict] = None,
+        project_root: Optional[Union[str, Path]] = None,
     ):
         """Initialize the VS Code controller.
 
         Args:
             input_backend: Input backend instance for keyboard/mouse simulation.
             config: Optional configuration dictionary.
+            project_root: Root directory of the project for absolute path resolution.
 
         Raises:
             ConfigurationError: If configuration values are invalid.
         """
         self.input = input_backend
         self.config = config or {}
+        self.project_root = Path(project_root) if project_root else None
 
         # Extract configuration with defaults
         vscode_config = self.config.get('vscode', {})
@@ -256,10 +261,13 @@ class VSCodeController:
                 )
 
     def open_file(self, path: str) -> bool:
-        """Open a file in VS Code using Quick Open (Ctrl+P).
+        """Open a file in VS Code reliably.
+
+        Uses `code --goto` command for reliable file opening, then ensures
+        focus is on the editor and clears any existing content.
 
         Args:
-            path: File path to open.
+            path: File path to open (relative or absolute).
 
         Returns:
             True if successful.
@@ -267,29 +275,101 @@ class VSCodeController:
         Raises:
             VSCodeNotFoundError: If VS Code is not available.
         """
+        # Resolve to absolute path
+        if os.path.isabs(path):
+            full_path = Path(path)
+        elif self.project_root:
+            full_path = self.project_root / path
+        else:
+            full_path = Path(path).resolve()
+
+        logger.info(f"Opening file via code command: {full_path}")
+
+        # Use code --goto to open the file at line 1
+        # This is more reliable than Ctrl+P for new/empty files
+        try:
+            subprocess.run(
+                ['code', '--goto', f'{full_path}:1:1'],
+                capture_output=True,
+                timeout=10,
+                check=False,  # Don't fail if VS Code returns non-zero
+            )
+        except subprocess.TimeoutExpired:
+            logger.warning("code command timed out, continuing anyway")
+        except FileNotFoundError:
+            logger.error("code command not found, falling back to Ctrl+P")
+            return self._open_file_fallback(path)
+
+        # Wait for file to open
+        time.sleep(2.0)
+
+        # Focus VS Code window
+        self._ensure_focused()
+        time.sleep(0.3)
+
+        # Press Escape multiple times to close any dialogs
+        for _ in range(3):
+            self.input.key_press('Escape')
+            time.sleep(0.1)
+
+        # Ensure we're in the editor (not sidebar or terminal)
+        # Ctrl+1 focuses the first editor group
+        self.input.key_combo('ctrl', '1')
+        time.sleep(0.2)
+
+        # Go to line 1, column 1
+        self.input.key_combo('ctrl', 'g')
+        time.sleep(0.2)
+        self.input.type_text('1', delay=0.02)
+        self.input.key_press('Return')
+        time.sleep(0.2)
+
+        # Select all and delete to clear any existing content
+        self.input.key_combo('ctrl', 'a')
+        time.sleep(0.1)
+        self.input.key_press('Delete')
+        time.sleep(0.1)
+
+        # Now we're at an empty file ready for typing
+        logger.info(f"File opened and cleared: {full_path}")
+        return True
+
+    def _open_file_fallback(self, path: str) -> bool:
+        """Fallback file opening using Ctrl+P.
+
+        Args:
+            path: File path to open.
+
+        Returns:
+            True if successful.
+        """
         self._ensure_focused()
 
-        logger.info(f"Opening file: {path}")
+        logger.info(f"Opening file via Ctrl+P: {path}")
 
-        # First press Escape to close any open dialogs
+        # Press Escape to close any open dialogs
         self.input.key_press('Escape')
         time.sleep(0.2)
 
         # Press Ctrl+P to open Quick Open
         self.input.key_combo('ctrl', 'p')
-        time.sleep(self.quick_open_delay + 0.3)  # Extra delay for Quick Open
+        time.sleep(self.quick_open_delay + 0.5)
 
-        # Clear any existing text in Quick Open
+        # Clear any existing text
         self.input.key_combo('ctrl', 'a')
         time.sleep(0.05)
 
         # Type the file path
         self.input.type_text(path, delay=0.03)
-        time.sleep(0.3)
+        time.sleep(0.5)
 
         # Press Enter to open
         self.input.key_press('Return')
-        time.sleep(self.file_load_delay + 0.5)  # Extra delay for file load
+        time.sleep(self.file_load_delay + 1.0)
+
+        # Focus editor
+        self.input.key_combo('ctrl', '1')
+        time.sleep(0.2)
 
         return True
 
