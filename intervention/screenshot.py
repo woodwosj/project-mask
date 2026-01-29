@@ -415,22 +415,39 @@ class ScrotBackend(ScreenshotBackend):
         Raises:
             ScreenshotError: If capture fails.
         """
-        try:
-            # Capture to stdout as PNG
-            result = subprocess.run(
-                ['scrot', '-o', '-', '-F', 'png'],
-                capture_output=True,
-                timeout=10,
-            )
+        import tempfile
+        import os
 
-            if result.returncode != 0:
-                raise ScreenshotError(
-                    f"scrot failed: {result.stderr.decode()}",
-                    backend="scrot"
+        try:
+            # Create a temporary file for the screenshot
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp_path = tmp.name
+
+            try:
+                # Capture to temp file with no sleep (-z) and overwrite (-o)
+                result = subprocess.run(
+                    ['scrot', '-z', '-o', tmp_path],
+                    capture_output=True,
+                    timeout=10,
                 )
 
+                if result.returncode != 0:
+                    raise ScreenshotError(
+                        f"scrot failed: {result.stderr.decode()}",
+                        backend="scrot"
+                    )
+
+                # Read the PNG file
+                with open(tmp_path, 'rb') as f:
+                    png_data = f.read()
+
+            finally:
+                # Clean up temp file
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
             # Optimize to JPEG
-            image_data, media_type, width, height = self._optimize_image(result.stdout)
+            image_data, media_type, width, height = self._optimize_image(png_data)
 
             return Screenshot(
                 image_data=image_data,
@@ -466,6 +483,9 @@ class ScrotBackend(ScreenshotBackend):
         Raises:
             ScreenshotError: If capture fails.
         """
+        import tempfile
+        import os
+
         try:
             # First activate the window
             subprocess.run(
@@ -477,21 +497,35 @@ class ScrotBackend(ScreenshotBackend):
             # Brief pause for window to come to front
             time.sleep(0.2)
 
-            # Capture focused window
-            result = subprocess.run(
-                ['scrot', '-u', '-o', '-', '-F', 'png'],
-                capture_output=True,
-                timeout=10,
-            )
+            # Create a temporary file for the screenshot
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp_path = tmp.name
 
-            if result.returncode != 0:
-                raise ScreenshotError(
-                    f"scrot failed: {result.stderr.decode()}",
-                    backend="scrot"
+            try:
+                # Capture focused window to temp file
+                result = subprocess.run(
+                    ['scrot', '-u', '-z', '-o', tmp_path],
+                    capture_output=True,
+                    timeout=10,
                 )
 
+                if result.returncode != 0:
+                    raise ScreenshotError(
+                        f"scrot failed: {result.stderr.decode()}",
+                        backend="scrot"
+                    )
+
+                # Read the PNG file
+                with open(tmp_path, 'rb') as f:
+                    png_data = f.read()
+
+            finally:
+                # Clean up temp file
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
             # Optimize to JPEG
-            image_data, media_type, width, height = self._optimize_image(result.stdout)
+            image_data, media_type, width, height = self._optimize_image(png_data)
 
             return Screenshot(
                 image_data=image_data,
