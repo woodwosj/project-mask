@@ -330,6 +330,9 @@ class VSCodeController:
         self.input.key_press('Delete')
         time.sleep(0.1)
 
+        # Final delay to ensure cursor is in editor and ready
+        time.sleep(0.5)
+
         # Now we're at an empty file ready for typing
         logger.info(f"File opened and cleared: {full_path}")
         return True
