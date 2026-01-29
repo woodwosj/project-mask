@@ -77,6 +77,13 @@ from intervention.orchestrator import (
     InterventionOrchestrator,
 )
 
+from intervention.remediation import (
+    RemediationResult,
+    RemediationSummary,
+    Remediator,
+    remediate_after_replay,
+)
+
 
 __all__ = [
     # Screenshot
@@ -103,4 +110,9 @@ __all__ = [
     'InterventionEvent',
     'InterventionConfig',
     'InterventionOrchestrator',
+    # Remediation
+    'RemediationResult',
+    'RemediationSummary',
+    'Remediator',
+    'remediate_after_replay',
 ]

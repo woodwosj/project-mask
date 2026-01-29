@@ -17,7 +17,8 @@ from replay.replay_engine import ReplayEngine
 
 from intervention import (
     InterventionOrchestrator, InterventionConfig,
-    ClaudeAnalyzer, create_screenshot_backend, RecoveryExecutor
+    ClaudeAnalyzer, create_screenshot_backend, RecoveryExecutor,
+    remediate_after_replay,
 )
 
 
@@ -125,8 +126,44 @@ def main():
         engine.execute(session, progress_callback=on_progress)
         print()
         print("=" * 60)
-        print("REPLAY COMPLETE!")
+        print("REPLAY COMPLETE - Starting verification...")
         print("=" * 60)
+
+        # Post-replay verification and remediation
+        print()
+        print("Verifying and remediating files...")
+        remediation_result = remediate_after_replay(
+            session=session,
+            vscode_controller=controller,
+            workspace_root=project_dir,
+        )
+
+        print()
+        print("Remediation Summary:")
+        print(f"  Files OK:        {remediation_result.files_ok}")
+        print(f"  Files fixed:     {remediation_result.files_remediated}")
+        print(f"  Files failed:    {remediation_result.files_failed}")
+
+        for result in remediation_result.results:
+            status = "✓" if result.success else "✗"
+            if result.attempts > 0:
+                print(f"  {status} {result.file_path}: "
+                      f"{result.original_similarity:.1%} → {result.final_similarity:.1%} "
+                      f"({result.attempts} attempts)")
+            else:
+                print(f"  {status} {result.file_path}: {result.final_similarity:.1%}")
+
+        if remediation_result.files_failed == 0:
+            print()
+            print("=" * 60)
+            print("ALL FILES VERIFIED OK!")
+            print("=" * 60)
+        else:
+            print()
+            print("=" * 60)
+            print(f"WARNING: {remediation_result.files_failed} files could not be fixed")
+            print("=" * 60)
+
     except Exception as e:
         print(f"Error: {e}")
         import traceback
