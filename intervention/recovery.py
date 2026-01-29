@@ -361,10 +361,10 @@ class RecoveryExecutor:
         logger.debug("Clicking in editor area")
 
         # Get screen dimensions if possible, otherwise use reasonable defaults
-        # Assuming 1920x1080, editor area is roughly center-right
-        # For smaller screens, these coordinates still work as they're conservative
-        editor_x = 960  # Center horizontally
-        editor_y = 400  # Upper-middle of editor area (below toolbar)
+        # Using conservative coordinates that work on 1280x720 and larger
+        # Editor area is typically center-right of screen
+        editor_x = 640  # Center horizontally (works for 1280+ width)
+        editor_y = 360  # Upper-middle of editor area (below toolbar)
 
         if hasattr(self.input, 'mouse_move_click'):
             self.input.mouse_move_click(editor_x, editor_y)
