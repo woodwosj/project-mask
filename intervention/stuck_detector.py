@@ -213,7 +213,7 @@ class StuckDetector:
             raise RuntimeError("Pillow not installed. Install with: pip install Pillow")
 
         # Load image from screenshot data
-        img = Image.open(io.BytesIO(screenshot.data))
+        img = Image.open(io.BytesIO(screenshot.image_data))
 
         # Convert to RGB if necessary (handles RGBA, etc.)
         if img.mode != 'RGB':
