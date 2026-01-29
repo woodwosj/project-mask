@@ -191,19 +191,9 @@ def run_replay(session_path: Path, project_dir: Path):
         input("Please click on VS Code, then press Enter...")
 
     # Progress callback
-    def on_progress(event: str, data: dict):
-        if event == 'file_start':
-            print(f"\n>>> Opening: {data.get('path')}")
-        elif event == 'operation':
-            op_type = data.get('type', '?')
-            line = data.get('line', '?')
-            if op_type == 'insert':
-                chars = len(data.get('content', ''))
-                print(f"    [{op_type}] line {line} ({chars} chars)")
-            else:
-                print(f"    [{op_type}] line {line}")
-        elif event == 'file_complete':
-            print(f"    Saved: {data.get('path')}")
+    def on_progress(message: str, current: int, total: int):
+        percent = (current / total * 100) if total > 0 else 0
+        print(f"  [{current}/{total}] ({percent:.0f}%) {message}")
 
     # Execute
     print("\nStarting replay...")
