@@ -73,7 +73,7 @@ def main():
         interval_seconds=30,
         confidence_threshold=0.8,
         max_retries=3,
-        cooldown_seconds=10,
+        min_cooldown_seconds=10,
     )
 
     orchestrator = InterventionOrchestrator(
