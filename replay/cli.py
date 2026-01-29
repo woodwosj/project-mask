@@ -153,7 +153,7 @@ def run_replay(session_path: Path, project_dir: Path):
     backend = create_backend()
     print(f"Input backend: {backend.__class__.__name__}")
 
-    controller = VSCodeController(backend, project_root=str(project_dir))
+    controller = VSCodeController(backend)
     engine = ReplayEngine(controller)
 
     # Load session
